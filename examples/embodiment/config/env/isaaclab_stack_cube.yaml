@@ -29,3 +29,10 @@ init_params:
   wrist_cam:
     height: 256
     width: 256
+  bridge:
+    enabled: true
+    env_id: IsaacContrib-Stack-Cube-Franka-IK-Rel-Visuomotor
+    host: 127.0.0.1
+    base_port: 5555
+    cameras: [wrist_cam, table_cam]
+    obs_keys: [policy/wrist_cam, policy/table_cam, policy/eef_pos, policy/eef_quat, policy/gripper_pos]

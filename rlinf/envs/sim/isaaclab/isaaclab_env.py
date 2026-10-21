@@ -43,7 +43,6 @@ class IsaaclabBaseEnv(gym.Env):
         with open_dict(cfg):
             cfg.init_params.num_envs = num_envs
         self.seed = self.cfg.seed + seed_offset
-        #! random server ports? not needed?
         self.seed_offset = seed_offset  # used by the bridge to pick the server port
         self.total_num_processes = total_num_processes
         self.worker_info = worker_info
@@ -81,7 +80,7 @@ class IsaaclabBaseEnv(gym.Env):
         obs_keys = bridge.get("obs_keys", None)
         return {
             "cmd": "init",
-            "env_id": str(self.isaaclab_env_id),
+            "env_id": str(bridge.get("env_id", None) or self.isaaclab_env_id),
             "num_envs": int(self.num_envs),
             "seed": int(self.seed),
             "cameras": cameras,
