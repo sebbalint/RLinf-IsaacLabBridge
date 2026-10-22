@@ -43,6 +43,7 @@ class IsaaclabBaseEnv(gym.Env):
         with open_dict(cfg):
             cfg.init_params.num_envs = num_envs
         self.seed = self.cfg.seed + seed_offset
+        self.seed_offset = seed_offset  # used by the bridge to pick the server port
         self.total_num_processes = total_num_processes
         self.worker_info = worker_info
         self.video_cfg = cfg.video_cfg
@@ -64,9 +65,48 @@ class IsaaclabBaseEnv(gym.Env):
     def _make_env_function(self):
         raise NotImplementedError
 
+    def _bridge_cfg(self):
+        bridge = self.cfg.init_params.get("bridge", None)
+        if bridge is not None and bridge.get("enabled", False):
+            return bridge
+        return None
+
+    def _bridge_init_message(self, bridge):
+        ip = self.cfg.init_params
+        cameras = {
+            str(name): [int(ip[name].height), int(ip[name].width)]
+            for name in bridge.get("cameras", [])
+        }
+        obs_keys = bridge.get("obs_keys", None)
+        return {
+            "cmd": "init",
+            "env_id": str(bridge.get("env_id", None) or self.isaaclab_env_id),
+            "num_envs": int(self.num_envs),
+            "seed": int(self.seed),
+            "cameras": cameras,
+            "obs_keys": [str(k) for k in obs_keys] if obs_keys else None,
+        }
+
     def _init_isaaclab_env(self):
-        env_fn = self._make_env_function()
-        self.env = SubProcIsaacLabEnv(env_fn)
+        bridge = self._bridge_cfg()
+        if bridge is None:
+            env_fn = self._make_env_function()
+            self.env = SubProcIsaacLabEnv(env_fn)
+        else:
+            # Isaac Lab runs in a server process on Windows (windows_server.py).
+            from rlinf.envs.sim.isaaclab.remote_venv import RemoteIsaacLabEnv
+
+            port = bridge.get("port", None)
+            if port is None:
+                # one server per (env worker, train/eval); see notes on VRAM
+                is_eval = int(bool(self.cfg.get("is_eval", False)))
+                port = int(bridge.get("base_port", 5555)) + 2 * self.seed_offset + is_eval
+            self.env = RemoteIsaacLabEnv(
+                init_msg=self._bridge_init_message(bridge),
+                host=str(bridge.get("host", "127.0.0.1")),
+                port=int(port),
+                local_device=bridge.get("local_device", None),
+            )
         self.env.reset(seed=self.seed)
 
     def _init_metrics(self):

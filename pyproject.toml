@@ -35,12 +35,10 @@ dependencies = [
     # dev8 rejects our version_base="1.1"; prerelease bound keeps agentic's dev1 pin valid
     "hydra-core<1.4.0.dev8",
     "numpy",
-
     # Data processing
     "datasets",
     "torchdata",
     "scipy",
-
     # Utilities
     "accelerate",
     "debugpy",
@@ -61,13 +59,14 @@ dependencies = [
     # Codecs for `env.obs_compression` (Env -> Rollout observation transfer)
     "lz4",
     "zstandard",
-
     # Logging
     "wandb<0.25.1",
     "swanlab>=0.6.11",
     "tensorboard",
-
-    "sortedcontainers"
+    "sortedcontainers",
+    "pyzmq>=27.2.0",
+    "gymnasium>=1.4.0",
+    "regex>=2026.9.29",
 ]
 
 [project.urls]
