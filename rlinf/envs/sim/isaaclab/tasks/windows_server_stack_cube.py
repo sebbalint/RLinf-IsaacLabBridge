@@ -32,6 +32,9 @@ from isaaclab.app import AppLauncher  # noqa: E402
 sim_app = AppLauncher(headless=True, enable_cameras=True).app
 
 
+PRINT_EVERY_NTH = 200
+
+
 def make_env(init: dict):
     """Copy of make_env_isaaclab() from stack_cube.py, parameterised by the init message."""
     import gymnasium as gym
@@ -64,6 +67,7 @@ def main():
 
     env, device, init_key, obs_keys = None, None, None, None
     n_steps, t_env, t_pack = 0, 0.0, 0.0
+    t_env_old, t_pack_old = t_env, t_pack
 
     while sim_app.is_running():
         if not sock.poll(1000):
@@ -105,9 +109,15 @@ def main():
                 send(sock, {"ok": True}, out)
                 t2 = time.perf_counter()
                 n_steps, t_env, t_pack = n_steps + 1, t_env + (t1 - t0), t_pack + (t2 - t1)
-                if n_steps % 200 == 0:
-                    print(f"[bridge] {n_steps} steps | env.step {1e3 * t_env / n_steps:.1f} ms"
-                          f" | pack+send {1e3 * t_pack / n_steps:.1f} ms", flush=True)
+                if n_steps % PRINT_EVERY_NTH == 0:
+                    print(f"[bridge] {n_steps} steps"
+                          f" | env.step {1e3 * (t_env-t_env_old) / PRINT_EVERY_NTH:.1f}"
+                          f" ({1e3 * t_env / n_steps:.1f}) ms"
+                          f" | pack+send {1e3 * (t_pack-t_pack_old) / PRINT_EVERY_NTH:.1f}"
+                          f" ({1e3 * t_pack / n_steps:.1f}) ms",
+                          flush=True)
+                    t_env_old = t_env
+                    t_pack_old = t_pack
 
             elif cmd == "close":
                 send(sock, {"ok": True})
